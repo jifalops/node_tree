@@ -1,99 +1,84 @@
-class Node<T> {
-  Node._(this.value);
-  final T value;
-  T _parent;
-  Map<int, T> _children;
-  int _position;
+import 'dart:collection';
 
-  T get parent => _parent;
-  Map<int, T> get children => Map.unmodifiable(_children);
+class Node<T> {
+  Node._(this.value, this._depth, this._position, [this._tree]);
+  final T value;
+  final _children = HashMap<int, Node<T>>();
+  int _depth;
+  int _position;
+  Tree<T> _tree;
+
   /// This node's position in its parent.
   int get position => _position;
+  int get depth => _depth;
+  Tree<T> get tree => _tree;
+  HashMap<int, Node<T>> get children => Map.unmodifiable(_children);
+  Node<T> get parent => _tree._parent[this];
 
-  @override
-  operator ==(o) => o is Node && value == o.value;
-  int get hashCode => value.hashCode;
-  @override toString() => 'Node: $value';
-}
+  bool get canHaveChildren => tree.maxDepth == null || depth < tree.maxDepth;
+  bool get hasChildren => _children.length > 0;
+  bool hasChildAt(int position) => _children[position] != null;
+  bool canHaveChildAt(int position) =>
+      position >= 0 &&
+      canHaveChildren &&
+      !hasChildAt(position) &&
+      (tree.maxBreadth == null ||
+          (position < tree.maxBreadth && _children.length < tree.maxBreadth));
 
-class Tree<T> {
-  Tree(this.root, {this.maxBreadth, this.maxDepth}) {
-    _parent[root] = null;
-    _children[root] = {};
-    _childIndex[root] = null;
-  }
-  final T root;
-  final int maxBreadth;
-  final int maxDepth;
-  final _parent = <T, T>{};
-  final _children = <T, Map<int, T>>{};
-  final _childIndex = <T, int>{};
-
-  bool nodeExists(T node) => _parent[node] != null || node == root;
-
-  bool nodeHasChildren(T node) => _children[node]?.length ?? 0 > 0;
-
-  bool nodeHasChild(T node, int childIndex) =>
-      _children[node]?.containsKey(childIndex);
-
-  /// Returns `0` if the node is not in the tree.
-  int depthOf(T node) {
-    if (node == root) return 1;
-    node = _parent[node];
-    if (node != null) {
-      int depth = 2;
-      while (_parent[node] != null) {
-        depth++;
-        node = _parent[node];
-      }
-      return depth;
+  Node<T> add(T value, int position) {
+    if (canHaveChildAt(position)) {
+      final node = Node._(value, depth + 1, position, tree);
+      tree._parent[node] = this;
+      return node;
     }
-    return 0;
+    return null;
   }
 
-  T parentOf(T node) => _parent[node];
-  Map<int, T> childrenOf(T node) => Map.unmodifiable(_children[node]);
-  int nodeIndexInParent(T node) => _childIndex[node];
+  Node<T> removeChildAt(int position) {
+    final node = _children.remove(position);
+    if (node != null) tree._remove(node);
+    return node;
+  }
 
-  bool addNode(T node, T parent, int childIndex) {
-    if (childIndex >= maxBreadth ||
-        nodeExists(node) ||
-        !nodeExists(parent) ||
-        nodeHasChild(parent, childIndex)) return false;
+  /// Returns false if this is the root node, true otherwise.
+  bool remove() {
+    if (this == tree.root) return false;
+    tree._remove(this);
+    return true;
+  }
 
-    if ((maxBreadth == null || _children[parent].length < maxBreadth) &&
-        (maxDepth == null || depthOf(parent) < maxDepth)) {
-      _children[parent][childIndex] = node;
-      _parent[node] = parent;
-      _children[node] = {};
-      _childIndex[node] = childIndex;
+  bool moveTo(Node<T> newParent, int newPosition) {
+    if (tree.contains(newParent) && newParent.canHaveChildAt(position)) {
+      if (parent != null) parent._children.remove(position);
+      newParent._children[newPosition] = this;
+      tree._parent[this] = newParent;
       return true;
     }
     return false;
   }
 
-  bool moveNode(T node, T parent, int childIndex) {
-    if (childIndex >= maxBreadth ||
-        !nodeExists(node) ||
-        !nodeExists(parent) ||
-        nodeHasChild(parent, childIndex)) return false;
+  @override
+  toString() => 'Node: $value';
+}
 
-    _children[_parent[node]].remove(_childIndex[node]);
-    _children[parent][childIndex] = node;
-    _parent[node] = parent;
-    _childIndex[node] = childIndex;
-    return true;
+class Tree<T> {
+  Tree(T rootValue, {this.maxBreadth, this.maxDepth})
+      : root = Node._(rootValue, 1, null) {
+    root._tree = this;
+    _parent[root] = null;
   }
 
-  /// The root node cannot be removed.
-  bool removeNode(T node) {
-    if (_parent[node] == null) return false;
-    _children[_parent[node]].remove(_childIndex[node]);
+  final Node<T> root;
+  final int maxBreadth;
+  final int maxDepth;
+  final _parent = HashMap<Node<T>, Node<T>>();
+
+  bool contains(Node<T> node) => _parent[node] != null || node == root;
+
+  void _remove(Node<T> node) {
     _parent.remove(node);
-    _childIndex.remove(node);
-    _children[node].forEach((index, n) {
-      removeNode(n);
+    node._children.forEach((index, n) {
+      _remove(n);
     });
-    return true;
   }
 }
