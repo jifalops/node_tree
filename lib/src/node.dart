@@ -38,7 +38,10 @@ class Node<T> {
       !hasChildAt(position) &&
       (tree.maxBreadth == null || position < tree.maxBreadth);
 
-  /// [position] defaults to [childCount], which gives it list-like behavior.
+  /// [position] defaults to [childCount], which gives it list-like behavior --
+  /// but it is not enforced. Once an element is added at a different position
+  /// or an element is moved or removed from the list, the default [position]
+  /// will cease to be correct.
   Node<T> add(T value, [int position]) {
     position ??= childCount;
     if (canHaveChildAt(position)) {

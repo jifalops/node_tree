@@ -115,11 +115,15 @@ class Tree<T> {
   /// tree. If [maxBreadth] or [maxDepth] are null, this will be fast.
   Node<T> addRandom(T value) {
     if (!canAddNode) return null;
-    Node n;
+    Node<T> n;
+    int position;
     do {
       n = nodes.elementAt(_random.nextInt(nodeCount));
     } while (!n.canHaveChildren);
-    return n.add(value);
+    if (maxBreadth != null) {
+      while (n.childAt(position = _random.nextInt(maxBreadth)) != null);
+    }
+    return n.add(value, position ?? n.childCount);
   }
 
   /// Returns a list that contains [root] plus the result of calling

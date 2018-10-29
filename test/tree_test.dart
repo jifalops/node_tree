@@ -3,9 +3,11 @@ import 'package:tree/tree.dart';
 import 'package:test/test.dart';
 
 const genLimit = 200;
+const genLimit2 = 20;
 
 void main() async {
   Future<int> gen(int i) async => i < genLimit ? i + 1 : null;
+  Future<int> gen2(int i) async => i < genLimit2 ? i + 1 : null;
 
   final binaryBF = await Tree.generate(gen, depthFirst: false, maxBreadth: 2);
   final ternaryBF = await Tree.generate(gen, depthFirst: false, maxBreadth: 3);
@@ -39,5 +41,5 @@ void main() async {
     test('random', () => expect(random.nodeCount, genLimit));
   });
 
-  // print(binaryLimitedBF);
+  print((await Tree.generate(gen, maxBreadth: 5)).toString(includePosition: true));
 }
