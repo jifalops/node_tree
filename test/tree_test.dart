@@ -3,12 +3,7 @@ import 'package:test/test.dart';
 
 void main() {
   group('A group of tests', () {
-    Awesome awesome;
-
-    setUp(() {
-      awesome = new Awesome();
-    });
-
+    final tree = Tree<int>(1);
     test('First Test', () {
       expect(awesome.isAwesome, isTrue);
     });
