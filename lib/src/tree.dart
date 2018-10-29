@@ -148,9 +148,10 @@ class Tree<T> {
 }
 
 _clampMaxNodes(
-        int maxBreadth, int maxDepth, int maxNodes, bool rootDepthIsOne) =>
-    (maxBreadth != null &&
-            maxDepth != null &&
-            (maxNodes == null || maxNodes > maxBreadth * maxDepth))
-        ? Tree.nodeLimit(maxBreadth, maxDepth, rootDepthIsOne)
-        : maxNodes;
+    int maxBreadth, int maxDepth, int maxNodes, bool rootDepthIsOne) {
+  if (maxBreadth != null && maxDepth != null) {
+    final limit = Tree.nodeLimit(maxBreadth, maxDepth, rootDepthIsOne);
+    if (maxNodes == null || maxNodes > limit) maxNodes = limit;
+  }
+  return maxNodes;
+}
