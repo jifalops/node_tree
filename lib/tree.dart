@@ -7,69 +7,75 @@ class Tree<T> {
       {this.maxBreadth,
       this.maxDepth,
       int maxNodes,
-      bool startDepthAtOne: false})
+      bool rootDepthIsOne: false})
       : assert(maxBreadth == null || maxBreadth >= 2),
-        assert(maxDepth == null || maxDepth >= 1 + (startDepthAtOne ? 1 : 0)),
+        assert(maxDepth == null || maxDepth >= 1 + (rootDepthIsOne ? 1 : 0)),
         assert(maxNodes == null || maxNodes >= 3),
         maxNodes =
-            _clampMaxNodes(maxBreadth, maxDepth, maxNodes, startDepthAtOne),
-        root = Node._(rootValue, startDepthAtOne ? 1 : 0, null) {
+            _clampMaxNodes(maxBreadth, maxDepth, maxNodes, rootDepthIsOne),
+        root = Node._(rootValue, rootDepthIsOne ? 1 : 0, null) {
     root._tree = this;
     _parents[root] = null;
   }
 
   /// Create a tree by repeatedly calling the [generator] function.
   ///
-  /// You must specify either [maxNodes] or ([maxDepth] and [maxBreadth]).
-  /// Failing to do so will result an infinite loop.
+  /// Tree traversal/attachment order is decided as:
   ///
-  /// If [depthFirst] is true and [maxDepth] is specified, depth-first
-  /// generation will be used. If [depthFirst] is false and [maxBreadth] is
-  /// specified, breadth-first generation will be used. Otherwise, generated
-  /// nodes will be attached to the tree by choosing an available parent node at
-  /// random.
-  Tree.generate(T Function(int index) generator,
-      {this.maxBreadth,
-      this.maxDepth,
+  /// * Depth-first if [depthFirst] is true and [maxDepth] is specified.
+  ///   * If [maxBreadth] is null, traversal starts back at the root node once
+  /// [maxDepth] has been reached. Normally, the next node is the current node's
+  /// parent.
+  /// * Breadth-first if [depthFirst] is false and [maxBreadth] is specified.
+  /// * Otherwise, the generated node's parent is chosen at random. See
+  /// [addRandom()].
+  ///
+  /// Generation is stopped when any of the following are true.
+  /// * [maxNodes] has been generated. This value is clamped if both
+  /// [maxBreadth] and [maxDepth] are specified.
+  /// * The [generator] function returns `null`.
+  static Future<Tree<T>> generate<T>(Future<T> Function(int index) generator,
+      {int maxBreadth,
+      int maxDepth,
       int maxNodes,
       bool depthFirst,
-      bool startDepthAtOne: false})
-      : assert(maxNodes != null || (maxBreadth != null && maxDepth != null)),
-      assert(maxBreadth == null || maxBreadth >= 2),
-        assert(maxDepth == null || maxDepth >= 1 + (startDepthAtOne ? 1 : 0)),
-        assert(maxNodes == null || maxNodes >= 3),
-        assert(generator != null),
-        maxNodes =
-            _clampMaxNodes(maxBreadth, maxDepth, maxNodes, startDepthAtOne),
-        root = Node._(generator(0), startDepthAtOne ? 1 : 0, null) {
-    root._tree = this;
-    _parents[root] = null;
+      bool rootDepthIsOne: false}) async {
+    final tree = Tree<T>(await generator(0),
+        maxBreadth: maxBreadth,
+        maxDepth: maxDepth,
+        maxNodes: maxNodes,
+        rootDepthIsOne: rootDepthIsOne);
 
-    final count = this.maxNodes;
-    int index = 1;
-    Node<T> n = root;
+    Node<T> n = tree.root;
+    T value = n.value;
+
+    bool shouldContinue() => tree.canAddNode && value != null;
+
     if (depthFirst == true && maxDepth != null) {
-      while (index < count) {
-        while ((n?.canHaveChildren ?? false) && index < count) {
-          n = n.add(generator(index++));
+      while (shouldContinue()) {
+        while ((n?.canHaveChildren ?? false) && shouldContinue()) {
+          value = await generator(tree.nodeCount);
+          if (value != null) n = n.add(value);
         }
-        n = maxBreadth == null ? root : n?.parent ?? root;
+        n = maxBreadth == null ? tree.root : n?.parent ?? tree.root;
       }
     } else if (depthFirst == false && maxBreadth != null) {
-      while (index < count && n != null) {
-        while (n.canHaveChildren && index < count) {
-          n.add(generator(index++));
+      final nodesToVisit = List<Node<T>>();
+      while (shouldContinue() && n != null) {
+        while (n.canHaveChildren && shouldContinue()) {
+          value = await generator(tree.nodeCount);
+          if (value != null) nodesToVisit.add(n.add(value));
         }
-        n = n.parent?.childAt(n.position + 1) ?? n.childAt(0);
+        n = n?.parent?.childAt(n.position + 1) ?? nodesToVisit.removeAt(0);
       }
     } else {
-      while (index < count) {
-        do {
-          n = nodes.elementAt(_random.nextInt(nodeCount));
-        } while (!n.canHaveChildren);
-        n.add(generator(index++));
+      while (shouldContinue()) {
+        value = await generator(tree.nodeCount);
+        if (value != null) tree.addRandom(value);
       }
     }
+
+    return tree;
   }
 
   final Node<T> root;
@@ -122,16 +128,18 @@ class Tree<T> {
       allNodes(sortByPosition: true, depthFirst: depthFirst)
           .map((n) => n.toString(includePosition))
           .join('\n');
+
+  static int nodeLimit(int breadth, int depth, [bool rootDepthIsOne = false]) =>
+      ((pow(breadth, depth + (rootDepthIsOne ? 0 : 1)) - 1) / (breadth - 1))
+          .truncate();
 }
 
 _clampMaxNodes(
-        int maxBreadth, int maxDepth, int maxNodes, bool startDepthAtOne) =>
+        int maxBreadth, int maxDepth, int maxNodes, bool rootDepthIsOne) =>
     (maxBreadth != null &&
             maxDepth != null &&
             (maxNodes == null || maxNodes > maxBreadth * maxDepth))
-        ? ((pow(maxBreadth, maxDepth + (startDepthAtOne ? 0 : 1)) - 1) /
-                (maxBreadth - 1))
-            .truncate()
+        ? Tree.nodeLimit(maxBreadth, maxDepth, rootDepthIsOne)
         : maxNodes;
 
 class Node<T> {
