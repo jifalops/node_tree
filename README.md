@@ -1,4 +1,4 @@
-# tree
+# node_tree
 
 An unbalanced tree of arbitrary but limitable breadth and depth. Supports random and asynchronous generation.
 

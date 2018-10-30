@@ -1,4 +1,4 @@
-import 'package:tree/tree.dart';
+import 'package:node_tree/node_tree.dart';
 import 'package:test/test.dart';
 
 const genLimit = 200;

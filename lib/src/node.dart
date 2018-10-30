@@ -1,4 +1,4 @@
-part of tree;
+part of node_tree;
 
 /// A node within a [Tree].
 class Node<T> {

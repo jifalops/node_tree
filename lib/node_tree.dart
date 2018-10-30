@@ -1,4 +1,4 @@
-library tree;
+library node_tree;
 
 import 'dart:collection';
 import 'dart:math';
