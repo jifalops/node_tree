@@ -98,7 +98,7 @@ class Node<T> {
   }
 
   @override
-  String toString([bool includePosition = true]) {
+  String toString([bool includePosition = false]) {
     final keys = _children.keys.toList()..sort();
     final kids = keys
         .map((i) => '${includePosition ? '$i: ' : ''}${_children[i].value}')

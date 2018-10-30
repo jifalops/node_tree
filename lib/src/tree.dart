@@ -80,7 +80,7 @@ class Tree<T> {
   }
 
   @override
-  String toString({bool depthFirst: false, bool includePosition: true}) =>
+  String toString({bool depthFirst: false, bool includePosition: false}) =>
       allNodes(depthFirst: depthFirst)
           .map((n) => n.toString(includePosition))
           .join('\n');

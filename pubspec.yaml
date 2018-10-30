@@ -2,7 +2,7 @@ name: node_tree
 description: An unbalanced tree of arbitrary but limitable breadth and depth. Supports random and asynchronous generation.
 version: 0.1.0
 author: Jacob Phillips <jifalops@gmail.com>
-homepage: https://github.com/jifalops/tree
+homepage: https://github.com/jifalops/node_tree
 
 environment:
   sdk: '>=2.0.0 <3.0.0'
