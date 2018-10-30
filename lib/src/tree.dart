@@ -1,6 +1,7 @@
 part of tree;
 
-/// A tree of arbitrary depth and breadth.
+/// An unbalanced tree of arbitrary but limitable breadth and depth. Supports
+/// random and asynchronous generation.
 ///
 /// The tree itself stores a [HashMap] of [Node] => parent relationships,
 /// allowing fast re-parenting of nodes and faster random tree generation
@@ -26,6 +27,68 @@ class Tree<T> {
     _parents[root] = null;
   }
 
+  final Node<T> root;
+  final int maxNodes;
+
+  /// The maximum number of child nodes any particular node may have.
+  final int maxBreadth;
+  final int maxDepth;
+  final _parents = HashMap<Node<T>, Node<T>>();
+
+  Random __random;
+  Random get _random => __random ??= Random();
+
+  Node<T> parentOf(Node<T> node) => _parents[node];
+
+  /// Gets the nodes in an undetermined order.
+  Iterable<Node<T>> get nodes => _parents.keys;
+  int get nodeCount => _parents.length;
+  bool get canAddNode => maxNodes == null || nodeCount < maxNodes;
+
+  bool contains(Node<T> node) => _parents.containsKey(node);
+
+  void _remove(Node<T> node) {
+    _parents.remove(node);
+    node._children.forEach((index, n) {
+      _remove(n);
+    });
+  }
+
+  /// This can take a very long time if there are few available spots in a large
+  /// tree. If [maxBreadth] or [maxDepth] are null, this will be fast.
+  Node<T> addRandom(T value) {
+    if (!canAddNode) return null;
+    Node<T> n;
+    int position;
+    do {
+      n = nodes.elementAt(_random.nextInt(nodeCount));
+    } while (!n.canHaveChildren);
+    if (maxBreadth != null) {
+      while (n.childAt(position = _random.nextInt(maxBreadth)) != null);
+    }
+    return n.add(value, position ?? n.childCount);
+  }
+
+  /// Returns a list that contains [root] plus the result of calling
+  /// [root.allChildren()].
+  List<Node<T>> allNodes({bool sortByPosition: true, bool depthFirst: false}) {
+    final list = List<Node<T>>();
+    list.add(root);
+    list.addAll(root.allChildren(
+        sortByPosition: sortByPosition, depthFirst: depthFirst));
+    return list;
+  }
+
+  @override
+  String toString({bool depthFirst: false, bool includePosition: true}) =>
+      allNodes(depthFirst: depthFirst)
+          .map((n) => n.toString(includePosition))
+          .join('\n');
+
+  static double nodeLimit(int breadth, int depth,
+          [bool rootDepthIsOne = false]) =>
+      (pow(breadth, depth + (rootDepthIsOne ? 0 : 1)) - 1) / (breadth - 1);
+
   /// Create a tree by repeatedly calling the [generator] function.
   ///
   /// Tree traversal/attachment order is decided as:
@@ -42,6 +105,12 @@ class Tree<T> {
   /// * [maxNodes] has been generated. This value is clamped if both
   /// [maxBreadth] and [maxDepth] are specified.
   /// * The [generator] function returns `null`.
+  ///
+  /// Depth-first trees are faster to generate than breadth-first trees since
+  /// they don't need to keep a list of nodes to visit. Random generation is the
+  /// slowest; potentially very slow if there are few spots available in a large
+  /// tree. See [addRandom()]. Depth-first generation with unlimited breadth is
+  /// faster than depth-first with limited breadth, but not significantly so.
   static Future<Tree<T>> generate<T>(Future<T> Function(int index) generator,
       {int maxBreadth,
       int maxDepth,
@@ -85,73 +154,13 @@ class Tree<T> {
 
     return tree;
   }
-
-  final Node<T> root;
-  final int maxNodes;
-
-  /// The maximum number of child nodes any particular node may have.
-  final int maxBreadth;
-  final int maxDepth;
-  final _parents = HashMap<Node<T>, Node<T>>();
-
-  Random __random;
-  Random get _random => __random ??= Random();
-
-  Node<T> parentOf(Node<T> node) => _parents[node];
-  Iterable<Node<T>> get nodes => _parents.keys;
-  int get nodeCount => _parents.length;
-  bool get canAddNode => maxNodes == null || nodeCount < maxNodes;
-
-  bool contains(Node<T> node) => _parents.containsKey(node);
-
-  void _remove(Node<T> node) {
-    _parents.remove(node);
-    node._children.forEach((index, n) {
-      _remove(n);
-    });
-  }
-
-  /// This can take a very long time if there are few available spots in a large
-  /// tree. If [maxBreadth] or [maxDepth] are null, this will be fast.
-  Node<T> addRandom(T value) {
-    if (!canAddNode) return null;
-    Node<T> n;
-    int position;
-    do {
-      n = nodes.elementAt(_random.nextInt(nodeCount));
-    } while (!n.canHaveChildren);
-    if (maxBreadth != null) {
-      while (n.childAt(position = _random.nextInt(maxBreadth)) != null);
-    }
-    return n.add(value, position ?? n.childCount);
-  }
-
-  /// Returns a list that contains [root] plus the result of calling
-  /// [root.allChildren()].
-  List<Node<T>> allNodes({bool sortByPosition: false, bool depthFirst: false}) {
-    final list = List<Node<T>>();
-    list.add(root);
-    list.addAll(root.allChildren(
-        sortByPosition: sortByPosition, depthFirst: depthFirst));
-    return list;
-  }
-
-  @override
-  String toString({bool depthFirst: false, includePosition: false}) =>
-      allNodes(sortByPosition: true, depthFirst: depthFirst)
-          .map((n) => n.toString(includePosition))
-          .join('\n');
-
-  static int nodeLimit(int breadth, int depth, [bool rootDepthIsOne = false]) =>
-      ((pow(breadth, depth + (rootDepthIsOne ? 0 : 1)) - 1) / (breadth - 1))
-          .truncate();
 }
 
 _clampMaxNodes(
     int maxBreadth, int maxDepth, int maxNodes, bool rootDepthIsOne) {
   if (maxBreadth != null && maxDepth != null) {
     final limit = Tree.nodeLimit(maxBreadth, maxDepth, rootDepthIsOne);
-    if (maxNodes == null || maxNodes > limit) maxNodes = limit;
+    if (maxNodes == null || maxNodes > limit) maxNodes = limit.floor();
   }
   return maxNodes;
 }

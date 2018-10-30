@@ -1,22 +1,5 @@
-A library for Dart developers.
+# tree
 
-Created from templates made available by Stagehand under a BSD-style
-[license](https://github.com/dart-lang/stagehand/blob/master/LICENSE).
+An unbalanced tree of arbitrary but limitable breadth and depth. Supports random and asynchronous generation.
 
-## Usage
-
-A simple usage example:
-
-```dart
-import 'package:tree/tree.dart';
-
-main() {
-  var awesome = new Awesome();
-}
-```
-
-## Features and bugs
-
-Please file feature requests and bugs at the [issue tracker][tracker].
-
-[tracker]: http://example.com/issues/replaceme
+Node children are kept in a HashMap instead of a list to support arbitrary placement.

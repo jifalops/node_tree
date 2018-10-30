@@ -38,6 +38,44 @@ void main() async {
     test('random', () => expect(random.nodeCount, genLimit));
   });
 
-  print((await Tree.generate((i) async => i + 1, maxNodes: 25, maxBreadth: 5, maxDepth: 3))
-      .toString(includePosition: false));
+  print((await Tree.generate(gen, maxNodes: 10, maxBreadth: 2, maxDepth: 3)));
+
+  final timer = Stopwatch();
+  int index = 0;
+  var tree = Tree<int>(index, maxNodes: 10000);
+  timer.start();
+  while (tree.addRandom(++index) != null);
+  // await Tree.generate((i) async => i, maxNodes: 10000);
+  timer.stop();
+  print('Unbound Random: ${timer.elapsed}');
+
+  timer.reset();
+  index = 0;
+  tree = Tree<int>(index, maxNodes: 10000, maxBreadth: 2);
+  timer.start();
+  while (tree.addRandom(++index) != null);
+  // await Tree.generate((i) async => i, maxNodes: 10000, maxBreadth: 2);
+  timer.stop();
+  print('Binary Random: ${timer.elapsed}');
+
+  timer.reset();
+  timer.start();
+  await Tree.generate((i) async => i,
+      maxNodes: 100000, maxDepth: 10, maxBreadth: 10, depthFirst: true);
+  timer.stop();
+  print('Generated depth-first: ${timer.elapsed}');
+
+  timer.reset();
+  timer.start();
+  await Tree.generate((i) async => i,
+      maxNodes: 100000, maxDepth: 10, depthFirst: true);
+  timer.stop();
+  print('Generated depth-first, unbound breadth: ${timer.elapsed}');
+
+  timer.reset();
+  timer.start();
+  await Tree.generate((i) async => i,
+      maxNodes: 100000, maxDepth: 10, maxBreadth: 10, depthFirst: false);
+  timer.stop();
+  print('Generated breadth-first: ${timer.elapsed}');
 }

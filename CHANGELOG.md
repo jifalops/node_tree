@@ -1,3 +1,3 @@
-## 1.0.0
+## [0.1.0] - October 30, 2018
 
-- Initial version, created by Stagehand
+* First release.

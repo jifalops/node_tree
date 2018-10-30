@@ -1,12 +1,6 @@
 part of tree;
 
 /// A node within a [Tree].
-///
-/// Child nodes are kept in a `HashMap<int, Node<T>>`. They can be used as a
-/// list by simply omitting the position argument to [add()]. However, if you
-/// do specify the child's position directly, you should continue to do so when
-/// adding other children, as [add()] simply sets the position to the current
-/// length.
 class Node<T> {
   Node._(this.value, this._depth, this._position, [this._tree]);
   final T value;
@@ -81,7 +75,7 @@ class Node<T> {
   }
 
   List<Node<T>> allChildren(
-      {bool sortByPosition: false, bool depthFirst: false}) {
+      {bool sortByPosition: true, bool depthFirst: false}) {
     final list = List<Node<T>>();
     if (sortByPosition) {
       final keys = _children.keys.toList()..sort();
@@ -104,7 +98,7 @@ class Node<T> {
   }
 
   @override
-  String toString([bool includePosition = false]) {
+  String toString([bool includePosition = true]) {
     final keys = _children.keys.toList()..sort();
     final kids = keys
         .map((i) => '${includePosition ? '$i: ' : ''}${_children[i].value}')
